@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: celltosim
+Version: 0.1.0
+Summary: 简化版的基于最优传输的单细胞数据分析工具
+Author: CellOT Team
+Requires-Python: >=3.7
+Requires-Dist: torch>=1.7.0
+Requires-Dist: numpy>=1.19.0
+Requires-Dist: scipy>=1.5.0
+Requires-Dist: pandas>=1.1.0
+Requires-Dist: anndata>=0.7.6
+Requires-Dist: scikit-learn>=0.24.0
+Requires-Dist: tqdm>=4.50.0
+Requires-Dist: tensorboard>=2.4.0
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

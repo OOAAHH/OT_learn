@@ -70,13 +70,13 @@ def transport_cells(g, source_data, dosage=None):
     # 开启梯度计算
     data.requires_grad_(True)
     
-    # 执行传输
+    # 执行传输 - 即使在评估模式下也需要计算梯度
     with torch.set_grad_enabled(True):
         transported = g.transport(data)
     
     # 应用插值剂量
     if dosage is not None:
-        transported = (1 - dosage) * data + dosage * transported
+        transported = (1 - dosage) * data.detach() + dosage * transported
     
     # 返回结果
     if is_anndata:
@@ -105,12 +105,15 @@ def batch_transport(g, source_loader, batch_size=128, dosage=None):
     all_transported = []
     
     for batch in source_loader:
-        batch.requires_grad_(True)
-        with torch.set_grad_enabled(True):
+        # 确保每个批次的梯度计算正确设置
+        batch = batch.requires_grad_(True)
+        
+        # 使用enable_grad确保即使在eval模式下也可以计算梯度
+        with torch.enable_grad():
             transported = g.transport(batch)
         
         if dosage is not None:
-            transported = (1 - dosage) * batch + dosage * transported
+            transported = (1 - dosage) * batch.detach() + dosage * transported
         
         all_transported.append(transported.detach())
     

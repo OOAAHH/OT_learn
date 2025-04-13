@@ -104,16 +104,37 @@ class ICNN(nn.Module):
 
     def transport(self, x):
         """计算最优传输映射"""
-        assert x.requires_grad
-        # 计算对输入的梯度
-        (output,) = autograd.grad(
-            self.forward(x),
-            x,
-            create_graph=True,
-            only_inputs=True,
-            grad_outputs=torch.ones((x.size()[0], 1), device=x.device).float(),
-        )
-        return output
+        # 确保输入需要梯度
+        if not x.requires_grad:
+            x.requires_grad_(True)
+            
+        # 确保开启梯度计算
+        with torch.enable_grad():
+            # 执行前向传播
+            out = self.forward(x)
+            # 创建全1向量作为输出梯度
+            grad_outputs = torch.ones((x.size()[0], 1), device=x.device).float()
+            
+            # 计算对输入的梯度
+            try:
+                (output,) = autograd.grad(
+                    outputs=out,
+                    inputs=x,
+                    create_graph=True,
+                    only_inputs=True,
+                    grad_outputs=grad_outputs,
+                )
+                return output
+            except RuntimeError as e:
+                if "does not require grad" in str(e):
+                    raise RuntimeError(f"输入张量未开启梯度计算。请确保在调用transport前设置requires_grad=True。原始错误: {e}")
+                elif "element 0 of tensors" in str(e):
+                    # 调试信息
+                    print(f"Debug - out requires_grad: {out.requires_grad}, shape: {out.shape}")
+                    print(f"Debug - x requires_grad: {x.requires_grad}, shape: {x.shape}")
+                    raise
+                else:
+                    raise
 
     def clamp_w(self):
         """将W矩阵的权重截断为非负"""

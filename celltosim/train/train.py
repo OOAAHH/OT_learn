@@ -139,6 +139,20 @@ def train_cellot(
         # 设置梯度
         source = source.requires_grad_(True)
         
+        # 处理批次大小不匹配的情况
+        source_batch_size = source.size(0)
+        target_batch_size = target.size(0)
+        
+        if source_batch_size != target_batch_size:
+            # 如果目标批次大小大于源批次大小，随机选择一部分
+            if target_batch_size > source_batch_size:
+                indices = torch.randperm(target_batch_size)[:source_batch_size]
+                target = target[indices]
+            # 如果源批次大小大于目标批次大小，随机采样以匹配大小
+            else:
+                indices = torch.randint(0, target_batch_size, (source_batch_size,))
+                target = target[indices]
+        
         # 训练判别器f
         opts.f.zero_grad()
         fl = compute_loss_f(f, g, source, target).mean()
@@ -162,15 +176,33 @@ def train_cellot(
         
         # 定期评估模型
         if step % eval_freq == 0:
-            with torch.no_grad():
-                # 获取测试数据
-                test_source_batch = next(iter(loaders.test_source))
-                test_target_batch = next(iter(loaders.test_target))
-                
-                # 计算传输结果
-                test_source_batch = test_source_batch.requires_grad_(True)
+            # 获取测试数据
+            test_source_batch = next(iter(loaders.test_source))
+            test_target_batch = next(iter(loaders.test_target))
+            
+            # 处理测试数据批次大小不匹配的情况
+            test_source_size = test_source_batch.size(0)
+            test_target_size = test_target_batch.size(0)
+            
+            if test_source_size != test_target_size:
+                # 如果目标批次大小大于源批次大小，随机选择一部分
+                if test_target_size > test_source_size:
+                    indices = torch.randperm(test_target_size)[:test_source_size]
+                    test_target_batch = test_target_batch[indices]
+                # 如果源批次大小大于目标批次大小，随机采样以匹配大小
+                else:
+                    indices = torch.randint(0, test_target_size, (test_source_size,))
+                    test_target_batch = test_target_batch[indices]
+            
+            # 计算传输结果 - 注意这部分需要使用梯度，即使在评估模式下
+            test_source_batch = test_source_batch.requires_grad_(True)
+            
+            # 对于transport操作，我们需要计算梯度
+            with torch.enable_grad():
                 transport = g.transport(test_source_batch)
-                
+            
+            # 其余评估在no_grad模式下进行
+            with torch.no_grad():
                 # 计算W2距离
                 w2 = compute_w2_distance(f, g, test_source_batch, test_target_batch, transport).item()
                 writer.add_scalar('eval/w2_distance', w2, step)

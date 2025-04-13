@@ -166,6 +166,21 @@ def compute_loss_f(f, g, source, target, transport=None):
     if transport is None:
         transport = g.transport(source)
     
+    # 处理批次大小不匹配的情况
+    source_batch_size = source.size(0)
+    target_batch_size = target.size(0)
+    
+    # 如果批次大小不同，随机采样或重复目标数据使其与源数据大小匹配
+    if source_batch_size != target_batch_size:
+        if target_batch_size > source_batch_size:
+            # 随机选择与源数据相同数量的目标数据
+            indices = torch.randperm(target_batch_size)[:source_batch_size]
+            target = target[indices]
+        else:
+            # 采样或重复目标数据以匹配源数据大小
+            indices = torch.randint(0, target_batch_size, (source_batch_size,))
+            target = target[indices]
+    
     # 基础损失
     base_loss = -f(transport) + f(target)
     

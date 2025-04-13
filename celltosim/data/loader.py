@@ -67,12 +67,32 @@ def prepare_cellot_data(adata, source_label, target_label, transport_key='transp
         'test_target': AnnDataDataset(test_target)
     }
     
+    # 计算所有数据集的大小
+    dataset_sizes = {
+        'train_source': len(datasets['train_source']),
+        'train_target': len(datasets['train_target']),
+        'test_source': len(datasets['test_source']),
+        'test_target': len(datasets['test_target'])
+    }
+    
+    # 计算最小训练集和测试集大小
+    min_train_size = min(dataset_sizes['train_source'], dataset_sizes['train_target'])
+    min_test_size = min(dataset_sizes['test_source'], dataset_sizes['test_target'])
+    
+    # 调整每个数据集的批次大小，确保批次大小不超过数据集大小
+    train_batch_size = min(batch_size, min_train_size)
+    test_batch_size = min(batch_size, min_test_size)
+    
+    print(f"训练集大小 - 源: {dataset_sizes['train_source']}, 目标: {dataset_sizes['train_target']}")
+    print(f"测试集大小 - 源: {dataset_sizes['test_source']}, 目标: {dataset_sizes['test_target']}")
+    print(f"使用的批次大小 - 训练: {train_batch_size}, 测试: {test_batch_size}")
+    
     # 创建数据加载器
     loaders = DataLoaders(
-        train_source=cast_dataset_to_loader(datasets['train_source'], batch_size=batch_size, shuffle=True),
-        train_target=cast_dataset_to_loader(datasets['train_target'], batch_size=batch_size, shuffle=True),
-        test_source=cast_dataset_to_loader(datasets['test_source'], batch_size=batch_size, shuffle=False),
-        test_target=cast_dataset_to_loader(datasets['test_target'], batch_size=batch_size, shuffle=False)
+        train_source=cast_dataset_to_loader(datasets['train_source'], batch_size=train_batch_size, shuffle=True),
+        train_target=cast_dataset_to_loader(datasets['train_target'], batch_size=train_batch_size, shuffle=True),
+        test_source=cast_dataset_to_loader(datasets['test_source'], batch_size=test_batch_size, shuffle=False),
+        test_target=cast_dataset_to_loader(datasets['test_target'], batch_size=test_batch_size, shuffle=False)
     )
     
     # 获取输入维度
