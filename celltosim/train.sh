@@ -7,3 +7,4 @@ python -m celltosim.examples.train_cellot \
     --n-layers 4 \
     --batch-size 128 \
     --n-iters 500000
+
